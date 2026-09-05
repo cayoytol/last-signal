@@ -1,0 +1,9 @@
+import type { Event } from './engine';
+export class GameAudio{
+ ctx:AudioContext|null=null;master:GainNode|null=null;volume=.35;cursor=0;ambient:OscillatorNode[]=[];
+ unlock(){try{if(!this.ctx){this.ctx=new AudioContext();this.master=this.ctx.createGain();this.master.gain.value=this.volume*.35;this.master.connect(this.ctx.destination);for(const f of [42,63.2]){const o=this.ctx.createOscillator(),g=this.ctx.createGain();o.frequency.value=f;o.type='sine';g.gain.value=.13;o.connect(g);g.connect(this.master);o.start();this.ambient.push(o);}}if(this.ctx.state==='suspended')void this.ctx.resume();}catch{/* Silent play remains available. */}}
+ setVolume(v:number){this.volume=v;if(this.master)this.master.gain.value=v*.35;}
+ tone(f:number,end:number,duration:number,volume:number,type:OscillatorType='sine'){if(!this.ctx||!this.master||this.volume===0)return;const t=this.ctx.currentTime,o=this.ctx.createOscillator(),g=this.ctx.createGain();o.type=type;o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(Math.max(end,1),t+duration);g.gain.setValueAtTime(volume,t);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(this.master);o.start(t);o.stop(t+duration);}
+ events(events:Event[],myId:string){for(const e of events){if(e.id<=this.cursor)continue;this.cursor=e.id;if(e.kind==='shot'&&e.owner===myId)this.tone(180,48,.075,.22,'triangle');if(e.kind==='kill')this.tone(75,25,.18,.24,'triangle');if(e.kind==='hit'&&e.owner===myId)this.tone(550,300,.04,.08);if(e.kind==='relay'){this.tone(360,720,.4,.2);setTimeout(()=>this.tone(540,1080,.5,.14),130);}if(e.kind==='dash'&&e.owner===myId)this.tone(150,450,.15,.1,'sawtooth');if(e.kind==='heal')this.tone(550,880,.22,.1);if(e.kind==='alarm')this.tone(220,180,.5,.18);}}
+ dispose(){this.ambient.forEach(o=>o.stop());void this.ctx?.close();}
+}
